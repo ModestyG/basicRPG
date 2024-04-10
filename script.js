@@ -16,7 +16,6 @@ class Vector2 {
     this.y = y;
   }
 }
-
 class GameObject {
   constructor(draw) {
     this.width = 100;
@@ -63,7 +62,6 @@ class Animator {
   }
   animate(timestamp) {
     ctx.beginPath();
-    console.log(document.getElementById(this.spriteSheet));
     ctx.drawImage(
       document.getElementById(this.spriteSheet),
       this.column * this.sWidth,
@@ -102,6 +100,9 @@ class Player extends GameObject {
     return (player.movingRight ? 1 : 0) - (player.movingLeft ? 1 : 0);
   }
   chooseAnimation() {
+    if (this.getHorizontalMovement() || this.getVerticalMovement()) {
+      this.animator.spriteSheet = "playerWalking";
+    }
     if (this.getHorizontalMovement() > 0) {
       this.animator.row = 1;
     } else if (this.getHorizontalMovement() < 0) {
@@ -133,7 +134,7 @@ function update(timestamp) {
     new Vector2(player.getHorizontalMovement(), player.getVerticalMovement()),
     player.speed
   );
-  player.chooseSpritesheet();
+  player.chooseAnimation();
   gameManager.instantiated.forEach((obj) => {
     obj.draw(timestamp);
   });
@@ -149,19 +150,15 @@ function clamp(num, min, max) {
 addEventListener("keydown", (e) => {
   if (e.key == "a") {
     player.movingLeft = true;
-    player.animator.spriteSheet = "playerWalking";
   }
   if (e.key == "d") {
     player.movingRight = true;
-    player.animator.spriteSheet = "playerWalking";
   }
   if (e.key == "w") {
     player.movingUp = true;
-    player.animator.spriteSheet = "playerWalking";
   }
   if (e.key == "s") {
     player.movingDown = true;
-    player.animator.spriteSheet = "playerWalking";
   }
 });
 addEventListener("keyup", (e) => {
