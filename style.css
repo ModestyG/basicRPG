@@ -1,0 +1,13 @@
+body {
+  display: flex;
+  justify-content: center;
+}
+
+canvas {
+  border-width: 5px;
+  border-style: ridge;
+}
+
+.sprite_sheet {
+  display: none;
+}
