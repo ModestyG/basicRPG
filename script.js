@@ -1,5 +1,6 @@
 let canvas = document.getElementById("gameCanvas");
 let ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 
 const CANVASWIDTH = 600;
 const CANVASHEIGHT = 600;
@@ -16,14 +17,15 @@ class Vector2 {
     this.y = y;
   }
 }
+
 class GameObject {
-  constructor(draw) {
+  constructor() {
     this.width = 100;
     this.height = 100;
     this.pos = new Vector2(0, 0);
-    this.draw = draw;
     this.horizontalMovement = 0;
     this.verticalMovement = 0;
+    this.components = [];
   }
   instantiate(pos = new Vector2(0, 0)) {
     this.pos = pos;
@@ -47,20 +49,24 @@ class GameObject {
 
     return new Vector2(this.pos.x, this.pos.y);
   }
+  getComponent(type) {
+    return this.components.find((element) => element instanceof type);
+  }
 }
 
+// Components
+
 class Animator {
-  constructor(gameObject, spriteSheet, sWidth, sHeight, columns, rows) {
+  constructor(gameObject, spriteSheet, sWidth, sHeight, columns) {
     this.gameObject = gameObject;
     this.spriteSheet = spriteSheet;
     this.sWidth = sWidth;
     this.sHeight = sHeight;
     this.columns = columns;
-    this.rows = rows;
     this.column = 0;
     this.row = 0;
   }
-  animate(timestamp) {
+  run(timestamp) {
     ctx.beginPath();
     ctx.drawImage(
       document.getElementById(this.spriteSheet),
@@ -81,45 +87,56 @@ class Animator {
     this.column = (this.column + 1) % this.columns;
   }
 }
-class Player extends GameObject {
-  constructor() {
-    super(function (timestamp) {
-      animator.animate(timestamp);
-    });
+
+// Game specific classes (Should move all of below to different file to separate game engine from game)
+
+class Entity extends GameObject {
+  constructor(idleSpritesheet, walkingSpritesheet) {
+    super();
+    this.idleSpritesheet = idleSpritesheet;
+    this.walkingSpritesheet = walkingSpritesheet;
+
     this.movingRight = false;
     this.movingLeft = false;
     this.movingUp = false;
     this.movingDown = false;
-    this.speed = 4;
-    this.animator = null;
-  }
-  getVerticalMovement() {
-    return (player.movingDown ? 1 : 0) - (player.movingUp ? 1 : 0);
-  }
-  getHorizontalMovement() {
-    return (player.movingRight ? 1 : 0) - (player.movingLeft ? 1 : 0);
+
+    this.speed = 4; //Base entity speed
   }
   chooseAnimation() {
+    let animator = this.getComponent(Animator);
     if (this.getHorizontalMovement() || this.getVerticalMovement()) {
-      this.animator.spriteSheet = "playerWalking";
+      animator.spriteSheet = this.walkingSpritesheet;
     }
     if (this.getHorizontalMovement() > 0) {
-      this.animator.row = 1;
+      animator.row = 1;
     } else if (this.getHorizontalMovement() < 0) {
-      this.animator.row = 3;
+      animator.row = 3;
     } else if (this.getVerticalMovement() > 0) {
-      this.animator.row = 0;
+      animator.row = 0;
     } else if (this.getVerticalMovement() < 0) {
-      this.animator.row = 2;
+      animator.row = 2;
     } else {
-      this.animator.spriteSheet = "playerIdle";
+      animator.spriteSheet = this.idleSpritesheet;
     }
+  }
+  getVerticalMovement() {
+    return (this.movingDown ? 1 : 0) - (this.movingUp ? 1 : 0);
+  }
+  getHorizontalMovement() {
+    return (this.movingRight ? 1 : 0) - (this.movingLeft ? 1 : 0);
+  }
+}
+
+class Player extends Entity {
+  constructor() {
+    super("playerIdle", "playerWalking");
+    this.components.push(new Animator(this, "playerIdle", 48, 48, 6));
   }
 }
 
 player = new Player();
-animator = new Animator(player, "playerWalking", 48, 48, 6, 10);
-player.animator = animator;
+playerAnimator = player.getComponent(Animator);
 player.instantiate(new Vector2(300, 100));
 
 direction = 0;
@@ -136,7 +153,9 @@ function update(timestamp) {
   );
   player.chooseAnimation();
   gameManager.instantiated.forEach((obj) => {
-    obj.draw(timestamp);
+    obj.components.forEach((component) => {
+      component.run(timestamp);
+    });
   });
   requestAnimationFrame(update);
 }
