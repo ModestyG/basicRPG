@@ -9,6 +9,7 @@ const CENTERY = CANVASHEIGHT / 2;
 
 gameManager = {
   instantiated: [],
+  scale: 3,
 };
 
 class Vector2 {
@@ -20,8 +21,8 @@ class Vector2 {
 
 class GameObject {
   constructor() {
-    this.width = 100;
-    this.height = 100;
+    this.width = 1;
+    this.height = 1;
     this.pos = new Vector2(0, 0);
     this.horizontalMovement = 0;
     this.verticalMovement = 0;
@@ -54,37 +55,45 @@ class GameObject {
   }
 }
 
-// Components
-
-class Animator {
-  constructor(gameObject, spriteSheet, sWidth, sHeight, columns) {
-    this.gameObject = gameObject;
-    this.spriteSheet = spriteSheet;
+class SpriteSheet {
+  constructor(id, sWidth, sHeight, columns) {
+    let sheetElement = document.createElement("img");
+    sheetElement.src = "Sprites/sprites/" + id;
+    sheetElement.style.display = "none";
+    document.body.appendChild(sheetElement);
+    this.sheet = sheetElement;
     this.sWidth = sWidth;
     this.sHeight = sHeight;
     this.columns = columns;
+  }
+}
+
+// Components
+
+class Animator {
+  constructor(gameObject, spriteSheet) {
+    this.gameObject = gameObject;
+    this.spriteSheet = spriteSheet;
     this.column = 0;
     this.row = 0;
   }
   run(timestamp) {
     ctx.beginPath();
     ctx.drawImage(
-      document.getElementById(this.spriteSheet),
-      this.column * this.sWidth,
-      this.row * this.sHeight,
-      this.sWidth,
-      this.sHeight,
+      this.spriteSheet.sheet,
+      this.column * this.spriteSheet.sWidth,
+      this.row * this.spriteSheet.sHeight,
+      this.spriteSheet.sWidth,
+      this.spriteSheet.sHeight,
       this.gameObject.pos.x,
       this.gameObject.pos.y,
-      this.gameObject.width,
-      this.gameObject.height
+      this.spriteSheet.sWidth * gameManager.scale,
+      this.spriteSheet.sHeight * gameManager.scale
     );
     ctx.stroke();
-    if (timestamp - lastTimestamp < timestep) {
-      return;
+    if (!(timestamp - lastTimestamp < timestep)) {
+      this.column = (this.column + 1) % this.spriteSheet.columns;
     }
-    lastTimestamp = timestamp;
-    this.column = (this.column + 1) % this.columns;
   }
 }
 
@@ -96,12 +105,22 @@ class Entity extends GameObject {
     this.idleSpritesheet = idleSpritesheet;
     this.walkingSpritesheet = walkingSpritesheet;
 
+    this.speed = 4; //Base entity speed
+  }
+}
+
+class Player extends Entity {
+  constructor() {
+    super(
+      new SpriteSheet("characters/playerIdle.png", 48, 48, 6),
+      new SpriteSheet("characters/playerWalking.png", 48, 48, 6)
+    );
+    this.components.push(new Animator(this));
+
     this.movingRight = false;
     this.movingLeft = false;
     this.movingUp = false;
     this.movingDown = false;
-
-    this.speed = 4; //Base entity speed
   }
   chooseAnimation() {
     let animator = this.getComponent(Animator);
@@ -128,18 +147,17 @@ class Entity extends GameObject {
   }
 }
 
-class Player extends Entity {
-  constructor() {
-    super("playerIdle", "playerWalking");
-    this.components.push(new Animator(this, "playerIdle", 48, 48, 6));
-  }
-}
+//Game specific variables
 
-player = new Player();
-playerAnimator = player.getComponent(Animator);
+let slime = new Entity(
+  new SpriteSheet("characters/slime.png", 32, 32, 4),
+  new SpriteSheet("characters/slime.png", 32, 32, 4)
+);
+slime.components.push(new Animator(slime, slime.idleSpritesheet));
+slime.instantiate(new Vector2(100, 100));
+
+let player = new Player();
 player.instantiate(new Vector2(300, 100));
-
-direction = 0;
 
 let lastTimestamp = 0,
   maxFPS = 15,
@@ -154,9 +172,14 @@ function update(timestamp) {
   player.chooseAnimation();
   gameManager.instantiated.forEach((obj) => {
     obj.components.forEach((component) => {
-      component.run(timestamp);
+      if (component instanceof Animator) {
+        component.run(timestamp);
+      }
     });
   });
+  if (!(timestamp - lastTimestamp < timestep)) {
+    lastTimestamp = timestamp;
+  }
   requestAnimationFrame(update);
 }
 
