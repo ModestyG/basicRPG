@@ -7,27 +7,48 @@ const CANVASHEIGHT = 600;
 const CENTERX = CANVASWIDTH / 2;
 const CENTERY = CANVASHEIGHT / 2;
 
-gameManager = {
-  instantiated: [],
-  scale: 3,
-};
+class GameManager {
+  constructor() {
+    this.instantiated = [];
+    this.scale = 3;
+    this.colliders = [];
+    this.debugMode = true;
+  }
+}
+gameManager = new GameManager();
 
 class Vector2 {
   constructor(x, y) {
     this.x = x;
+    this.xVar = x;
     this.y = y;
+    this.yVar = y;
+  }
+  set x(val) {
+    this.xVar = val;
+  }
+  get x() {
+    return this.xVar;
+  }
+  set y(val) {
+    this.yVar = val;
+  }
+  get y() {
+    return this.yVar;
   }
 }
 
 class GameObject {
   constructor() {
-    this.width = 1;
-    this.height = 1;
-    this.pos = new Vector2(0, 0);
     this.horizontalMovement = 0;
     this.verticalMovement = 0;
     this.components = [];
+    this.activeComponents = []; // Components with a "run" function that runs every update
+
+    this.pos = new Vector2(); // This is the variable we call upon when getting or changing position
+    this.posVariable = new Vector2(); // This is the variable within which we actually store the position
   }
+
   instantiate(pos = new Vector2(0, 0)) {
     this.pos = pos;
     gameManager.instantiated.push(this);
@@ -53,10 +74,60 @@ class GameObject {
   getComponent(type) {
     return this.components.find((element) => element instanceof type);
   }
+
+  addComponent(type, ...constructors) {
+    let component = new type(this, ...constructors);
+    this.components.push(component);
+    if (component.active) {
+      this.activeComponents.push(component);
+    }
+    if (type == BoxCollider) {
+      let gameObject = this;
+      gameManager.colliders.push(component);
+      Object.defineProperty(this, "pos", {
+        set(val) {
+          this.posVariable = val;
+          Object.defineProperty(this.pos, "x", {
+            set(val) {
+              if (this.x != val) {
+                this.xVar = val;
+                gameObject.getComponent(BoxCollider).checkCollision("x");
+              } else {
+                this.xVar = val;
+              }
+            },
+            get() {
+              return this.xVar;
+            },
+          });
+          Object.defineProperty(this.pos, "y", {
+            set(val) {
+              if (this.y != val) {
+                this.yVar = val;
+                gameObject.getComponent(BoxCollider).checkCollision("y");
+              } else {
+                this.yVar = val;
+              }
+            },
+            get() {
+              return this.yVar;
+            },
+          });
+        },
+        get() {
+          return this.posVariable;
+        },
+      });
+    }
+  }
+
+  getHeight() {
+    return this.getComponent(Animator).sHeight;
+  }
 }
 
 class SpriteSheet {
-  constructor(id, sWidth, sHeight, columns) {
+  constructor(id, sWidth, sHeight, columns = 1) {
     let sheetElement = document.createElement("img");
     sheetElement.src = "Sprites/sprites/" + id;
     sheetElement.style.display = "none";
@@ -73,6 +144,7 @@ class SpriteSheet {
 class Animator {
   constructor(gameObject, spriteSheet) {
     this.gameObject = gameObject;
+    this.active = true;
     this.spriteSheet = spriteSheet;
     this.column = 0;
     this.row = 0;
@@ -97,6 +169,103 @@ class Animator {
   }
 }
 
+class BoxCollider {
+  constructor(
+    gameObject,
+    width,
+    height,
+    offset = new Vector2(0, 0),
+    isTrigger = false
+  ) {
+    this.width = width * gameManager.scale;
+    this.height = height * gameManager.scale;
+    this.offset = new Vector2(
+      offset.x * gameManager.scale,
+      offset.y * gameManager.scale
+    );
+    this.gameObject = gameObject;
+    this.isTrigger = isTrigger;
+  }
+  checkCollision(axis) {
+    gameManager.colliders.forEach((collider) => {
+      if (gameManager.debugMode) {
+        ctx.beginPath();
+        ctx.strokeRect(
+          collider.getPos("x") + collider.offset.x,
+          collider.getPos("y") + collider.offset.y,
+          collider.width,
+          collider.height
+        );
+        ctx.stroke();
+      }
+      if (collider === this) return;
+      if (
+        // Is the collider within the same x as the moving object's collider
+        this.getPos("x") + this.offset.x <
+          collider.getPos("x") + collider.offset.x + collider.width &&
+        this.getPos("x") + this.offset.x + this.width >
+          collider.getPos("x") + collider.offset.x &&
+        // Is the collider within the same y as the moving object's collider
+        this.getPos("y") + this.offset.y <
+          collider.getPos("y") + collider.offset.y + collider.height &&
+        this.getPos("y") + this.offset.y + this.height >
+          collider.getPos("y") + collider.offset.y
+      )
+        if (this.isTrigger) {
+          //Put code for onTrigger
+        } else {
+          this.gameObject.pos[axis] +=
+            collider.getPos(axis) > this.getPos(axis) ? -1 : 1; //Move outside of the collider depending on if they are to which side it appears on
+        }
+    });
+  }
+  getPos(axis = "") {
+    if (axis) return this.gameObject.pos[axis];
+    else return this.gameObject.pos;
+  }
+}
+
+class Controller {
+  constructor(
+    gameObject,
+    horizontalPositive,
+    horizontalNegative,
+    verticalPositive,
+    verticalNegative
+  ) {
+    this.active = false;
+
+    addEventListener("keydown", (e) => {
+      if (e.key == horizontalNegative) {
+        gameObject.movingLeft = true;
+      }
+      if (e.key == horizontalPositive) {
+        gameObject.movingRight = true;
+      }
+      if (e.key == verticalPositive) {
+        gameObject.movingUp = true;
+      }
+      if (e.key == verticalNegative) {
+        gameObject.movingDown = true;
+      }
+    });
+    addEventListener("keyup", (e) => {
+      if (e.key == horizontalNegative) {
+        gameObject.movingLeft = false;
+      }
+      if (e.key == horizontalPositive) {
+        gameObject.movingRight = false;
+      }
+      if (e.key == verticalPositive) {
+        gameObject.movingUp = false;
+      }
+      if (e.key == verticalNegative) {
+        gameObject.movingDown = false;
+      }
+    });
+  }
+}
+
 // Game specific classes (Should move all of below to different file to separate game engine from game)
 
 class Entity extends GameObject {
@@ -105,7 +274,7 @@ class Entity extends GameObject {
     this.idleSpritesheet = idleSpritesheet;
     this.walkingSpritesheet = walkingSpritesheet;
 
-    this.speed = 4; //Base entity speed
+    this.speed = 6; //Base entity speed
   }
 }
 
@@ -115,7 +284,9 @@ class Player extends Entity {
       new SpriteSheet("characters/playerIdle.png", 48, 48, 6),
       new SpriteSheet("characters/playerWalking.png", 48, 48, 6)
     );
-    this.components.push(new Animator(this));
+    this.addComponent(Animator, this);
+    this.addComponent(Controller, "d", "a", "w", "s");
+    this.addComponent(BoxCollider, 13, 22, new Vector2(18, 19));
 
     this.movingRight = false;
     this.movingLeft = false;
@@ -147,20 +318,25 @@ class Player extends Entity {
   }
 }
 
-//Game specific variables
+//Game specific variables------------------------------------------------------------------------------------------
+
+let player = new Player();
+player.instantiate(new Vector2(300, 100));
 
 let slime = new Entity(
   new SpriteSheet("characters/slime.png", 32, 32, 4),
   new SpriteSheet("characters/slime.png", 32, 32, 4)
 );
-slime.components.push(new Animator(slime, slime.idleSpritesheet));
+slime.addComponent(Animator, slime.idleSpritesheet);
 slime.instantiate(new Vector2(100, 100));
 
-let player = new Player();
-player.instantiate(new Vector2(300, 100));
+let counter = new GameObject();
+counter.addComponent(Animator, new SpriteSheet("objects/counter.png", 78, 33));
+counter.addComponent(BoxCollider, 78, 33);
+counter.instantiate(new Vector2(200, 200));
 
 let lastTimestamp = 0,
-  maxFPS = 15,
+  maxFPS = 10,
   timestep = 1000 / maxFPS;
 
 function update(timestamp) {
@@ -171,10 +347,8 @@ function update(timestamp) {
   );
   player.chooseAnimation();
   gameManager.instantiated.forEach((obj) => {
-    obj.components.forEach((component) => {
-      if (component instanceof Animator) {
-        component.run(timestamp);
-      }
+    obj.activeComponents.forEach((component) => {
+      component.run(timestamp);
     });
   });
   if (!(timestamp - lastTimestamp < timestep)) {
@@ -186,36 +360,5 @@ function update(timestamp) {
 function clamp(num, min, max) {
   num = Math.min(Math.max(num, min), max);
 }
-
-// Player movement
-
-addEventListener("keydown", (e) => {
-  if (e.key == "a") {
-    player.movingLeft = true;
-  }
-  if (e.key == "d") {
-    player.movingRight = true;
-  }
-  if (e.key == "w") {
-    player.movingUp = true;
-  }
-  if (e.key == "s") {
-    player.movingDown = true;
-  }
-});
-addEventListener("keyup", (e) => {
-  if (e.key == "a") {
-    player.movingLeft = false;
-  }
-  if (e.key == "d") {
-    player.movingRight = false;
-  }
-  if (e.key == "w") {
-    player.movingUp = false;
-  }
-  if (e.key == "s") {
-    player.movingDown = false;
-  }
-});
 
 requestAnimationFrame(update);
