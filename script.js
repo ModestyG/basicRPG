@@ -127,7 +127,7 @@ class GameObject {
 }
 
 class SpriteSheet {
-  constructor(id, sWidth, sHeight, columns = 1) {
+  constructor(id, sWidth, sHeight, yOffset = sHeight, columns = 1) {
     let sheetElement = document.createElement("img");
     sheetElement.src = "Sprites/sprites/" + id;
     sheetElement.style.display = "none";
@@ -135,6 +135,7 @@ class SpriteSheet {
     this.sheet = sheetElement;
     this.sWidth = sWidth;
     this.sHeight = sHeight;
+    this.yOffset = yOffset;
     this.columns = columns;
   }
 }
@@ -166,6 +167,32 @@ class Animator {
     if (!(timestamp - lastTimestamp < timestep)) {
       this.column = (this.column + 1) % this.spriteSheet.columns;
     }
+  }
+}
+
+class SpriteRenderer {
+  //Used for objects without animation
+  constructor(gameObject, spriteSheet, xIndex = 0, yIndex = 0) {
+    this.gameObject = gameObject;
+    this.active = true;
+    this.spriteSheet = spriteSheet;
+    this.xIndex = xIndex;
+    this.yIndex = yIndex;
+  }
+  run(timestamp) {
+    ctx.beginPath();
+    ctx.drawImage(
+      this.spriteSheet.sheet,
+      this.xIndex * this.spriteSheet.sWidth,
+      this.yIndex * this.spriteSheet.sHeight,
+      this.spriteSheet.sWidth,
+      this.spriteSheet.sHeight,
+      this.gameObject.pos.x,
+      this.gameObject.pos.y,
+      this.spriteSheet.sWidth * gameManager.scale,
+      this.spriteSheet.sHeight * gameManager.scale
+    );
+    ctx.stroke();
   }
 }
 
@@ -280,8 +307,8 @@ class Entity extends GameObject {
 class Player extends Entity {
   constructor() {
     super(
-      new SpriteSheet("characters/playerIdle.png", 48, 48, 6),
-      new SpriteSheet("characters/playerWalking.png", 48, 48, 6)
+      new SpriteSheet("characters/playerIdle.png", 48, 48, 41, 6),
+      new SpriteSheet("characters/playerWalking.png", 48, 48, 41, 6)
     );
     this.addComponent(Animator, this);
     this.addComponent(Controller, "d", "a", "w", "s");
@@ -322,16 +349,23 @@ class Player extends Entity {
 let player = new Player();
 player.instantiate(new Vector2(250, 100));
 
-let slime = new Entity(
-  new SpriteSheet("characters/slime.png", 32, 32, 4),
-  new SpriteSheet("characters/slime.png", 32, 32, 4)
-);
-
 let counter = new GameObject();
-counter.addComponent(Animator, new SpriteSheet("objects/counter.png", 78, 33));
+counter.addComponent(
+  SpriteRenderer,
+  new SpriteSheet("objects/counter.png", 78, 33)
+);
 counter.addComponent(BoxCollider, 78, 17, new Vector2(0, 16));
 counter.addComponent(BoxCollider, 15, 16, new Vector2(63, 0));
-counter.instantiate(new Vector2(200, 200));
+counter.instantiate(new Vector2(15, 130));
+
+let box = new GameObject();
+box.addComponent(
+  SpriteRenderer,
+  new SpriteSheet("objects/objects.png", 16, 16, 14),
+  5
+);
+box.addComponent(BoxCollider, 14, 11, new Vector2(1, 3));
+box.instantiate(new Vector2(540, 280));
 
 if (gameManager.debugMode) {
   addEventListener("mousedown", function (e) {
@@ -357,12 +391,31 @@ function update(timestamp) {
     player.speed
   );
   player.chooseAnimation();
+  console.log(
+    "Player:",
+    player.pos.y +
+      player.getComponent(Animator).spriteSheet.yOffset * gameManager.scale,
+    "Counter:",
+    counter.pos.y +
+      counter.getComponent(SpriteRenderer).spriteSheet.yOffset *
+        gameManager.scale,
+    "Box:",
+    box.pos.y +
+      box.getComponent(SpriteRenderer).spriteSheet.yOffset * gameManager.scale
+  );
   gameManager.instantiated.sort(
     //Sortera object i instantiated så att objekten med högst y animeras sist
     (a, b) =>
       b.pos.y +
-      b.getComponent(Animator).spriteSheet.sHeight -
-      (a.pos.y + a.getComponent(Animator).spriteSheet.sHeight)
+      (b.getComponent(Animator)
+        ? b.getComponent(Animator).spriteSheet.yOffset * gameManager.scale
+        : b.getComponent(SpriteRenderer).spriteSheet.yOffset *
+          gameManager.scale) -
+      (a.pos.y +
+        (a.getComponent(Animator)
+          ? a.getComponent(Animator).spriteSheet.yOffset * gameManager.scale
+          : a.getComponent(SpriteRenderer).spriteSheet.yOffset *
+            gameManager.scale))
   );
   gameManager.instantiated.forEach((obj) => {
     obj.activeComponents.forEach((component) => {
