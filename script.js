@@ -29,10 +29,20 @@ class Player extends Entity {
   }
 
   run() {
-    //Make interactions work (Interactable[0] is the closest interactable)
+    //Make interactions work
     removeEventListener("keydown", this.interaciton);
+    eBtn.pos = new Vector2(-Infinity, -Infinity);
     this.interactable.sort((a, b) => a.distance - b.distance);
-    if (this.interactable[0].distance <= this.interactable[0].range) {
+    let closest = this.interactable[0];
+
+    if (closest.distance <= this.interactable[0].range) {
+      eBtn.pos = new Vector2(
+        closest.gameObject.pos.x -
+          3.5 * gameManager.scale +
+          closest.offset.x +
+          closest.width / 2,
+        closest.gameObject.pos.y - 7 * gameManager.scale
+      );
       this.interaciton = (e) => {
         if (e.key == this.interactable[0].key) {
           this.interactable[0].func();
@@ -224,6 +234,12 @@ box2.addComponent(
 );
 box2.instantiate(new Vector2(400, 280));
 
+let eBtn = new GameObject();
+eBtn.addComponent(
+  new SpriteRenderer(eBtn, new SpriteSheet("HUD/E-button.png", 7, 7))
+);
+eBtn.instantiate(new Vector2(-Infinity, -Infinity), true);
+
 if (gameManager.debugMode) {
   addEventListener("mousedown", function (e) {
     //Add so you know where your mouse has clicked
@@ -246,11 +262,17 @@ let lastTimestamp = 0,
 function update(timestamp) {
   ctx.clearRect(0, 0, CANVASWIDTH, CANVASHEIGHT);
   gameManager.sortObjects();
+  gameManager.instantiatedHUD.forEach((obj) => {
+    obj.activeComponents.forEach((component) => {
+      component.run(timestamp);
+    });
+  });
   gameManager.instantiated.forEach((obj) => {
     obj.activeComponents.forEach((component) => {
       component.run(timestamp);
     });
   });
+
   player.run();
 
   if (!(timestamp - lastTimestamp < timestep)) {

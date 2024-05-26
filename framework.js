@@ -11,6 +11,7 @@ const CENTERY = CANVASHEIGHT / 2;
 class GameManager {
   constructor() {
     this.instantiated = [];
+    this.instantiatedHUD = [];
     this.scale = 3;
     this.colliders = [];
     this.debugMode = true;
@@ -70,9 +71,13 @@ class GameObject {
     this.posVariable = new Vector2(); // This is the variable within which we actually store the position
   }
 
-  instantiate(pos = new Vector2(0, 0)) {
+  instantiate(pos = new Vector2(0, 0), hud = false) {
     this.pos = pos;
-    gameManager.instantiated.push(this);
+    if (hud) {
+      gameManager.instantiatedHUD.push(this);
+    } else {
+      gameManager.instantiated.push(this);
+    }
   }
   transform(direction, speed) {
     if (typeof direction == "number") {
