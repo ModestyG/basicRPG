@@ -67,11 +67,16 @@ class Player extends Entity {
     }
 
     //Inventory View
-    for (let i = 0; i < this.inventory.length; i++) {
+    for (let i = 0; i < this.inventorySize; i++) {
       const item = this.inventory[i];
       const slot = this.inventorySlots[i];
-      slot.contentObject.getComponent(SpriteRenderer).yIndex = item.yIndex;
-      slot.contentObject.getComponent(SpriteRenderer).xIndex = item.xIndex;
+      if (item) {
+        slot.contentObject.getComponent(SpriteRenderer).yIndex = item.yIndex;
+        slot.contentObject.getComponent(SpriteRenderer).xIndex = item.xIndex;
+      } else {
+        slot.contentObject.getComponent(SpriteRenderer).yIndex = 0;
+        slot.contentObject.getComponent(SpriteRenderer).xIndex = 0;
+      }
     }
   }
 
@@ -212,6 +217,8 @@ class NPC extends Entity {
       new NPCController(this)
     );
     this.speed = 4;
+
+    this.request = "stick";
   }
 }
 
@@ -273,6 +280,16 @@ class NPCController extends Component {
     super(gameObject, true);
     this.destination = new Vector2(130, 245);
     this.arrived = false;
+    this.leaving = false;
+    this.interacitonHandler = new InteractionHandler(
+      this.gameObject,
+      () => {
+        this.hand();
+      },
+      13,
+      19,
+      new Vector2(18, 26)
+    );
   }
   run() {
     if (!this.arrived) {
@@ -285,22 +302,25 @@ class NPCController extends Component {
       );
       if (this.destination.getDistance(this.gameObject.getPos()) < 5) {
         this.arrived = true;
-        this.gameObject.addComponent(
-          new InteractionHandler(
-            this.gameObject,
-            this.hand,
-            13,
-            19,
-            new Vector2(18, 26)
-          )
-        );
+        this.gameObject.addComponent(this.interacitonHandler);
       }
-    } else {
-      console.log("done");
     }
   }
   hand() {
-    console.log("hand");
+    if (
+      player.inventory[0] &&
+      this.gameObject.request == player.inventory[0].name
+    ) {
+      player.inventory.shift();
+      this.gameObject.removeComponent(InteractionHandler);
+      this.leaving = true;
+      this.destination = new Vector2(415, 670);
+      this.arrived = false;
+      player.interactable.splice(
+        player.interactable.indexOf(this.interacitonHandler),
+        1
+      );
+    }
   }
 }
 
@@ -320,11 +340,10 @@ counter.addComponent(
 );
 counter.instantiate(new Vector2(15, 130));
 
-let box = new Box(new Item("stick", 5, 1));
+let box = new Box(new Item("stick", 4, 3));
 box.instantiate(new Vector2(540, 280));
 
-let npc = new NPC();
-npc.instantiate(new Vector2(280, 470));
+new NPC().instantiate(new Vector2(280, 470));
 
 let eBtn = new GameObject();
 eBtn.addComponent(

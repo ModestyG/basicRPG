@@ -106,6 +106,19 @@ class GameObject {
     return this.components.find((element) => element instanceof type);
   }
 
+  removeComponent(type, id = 0) {
+    let component = this.components.find(
+      (element) => element instanceof type && element.id == id
+    );
+    let index = this.components.indexOf(component);
+    this.components.splice(index, 1);
+
+    if (component.active) {
+      index = this.activeComponents.indexOf(component);
+      this.activeComponents.splice(index, 1);
+    }
+  }
+
   addComponent(...components) {
     components.forEach((component) => {
       if (component instanceof Component) {
@@ -202,7 +215,7 @@ class SpriteSheet {
 }
 
 class Component {
-  constructor(gameObject, active, id = null) {
+  constructor(gameObject, active, id = 0) {
     this.gameObject = gameObject;
     this.active = active;
     this.id = id;
