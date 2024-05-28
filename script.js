@@ -201,6 +201,20 @@ class InteractionHandler extends Component {
   }
 }
 
+class NPC extends Entity {
+  constructor() {
+    super(
+      new SpriteSheet("characters/playerIdle.png", 48, 48, 41, 6),
+      new SpriteSheet("characters/playerWalking.png", 48, 48, 41, 6)
+    );
+    this.addComponent(
+      new BoxCollider(this, 13, 5, new Vector2(18, 35)),
+      new NPCController(this)
+    );
+    this.speed = 4;
+  }
+}
+
 class Box extends GameObject {
   constructor(inside) {
     super();
@@ -254,6 +268,42 @@ class InventorySlot extends GameObject {
   }
 }
 
+class NPCController extends Component {
+  constructor(gameObject) {
+    super(gameObject, true);
+    this.destination = new Vector2(130, 245);
+    this.arrived = false;
+  }
+  run() {
+    if (!this.arrived) {
+      this.gameObject.transform(
+        new Vector2(
+          this.destination.x - this.gameObject.getPos().x,
+          this.destination.y - this.gameObject.getPos().y
+        ),
+        this.gameObject.speed
+      );
+      if (this.destination.getDistance(this.gameObject.getPos()) < 5) {
+        this.arrived = true;
+        this.gameObject.addComponent(
+          new InteractionHandler(
+            this.gameObject,
+            this.hand,
+            13,
+            19,
+            new Vector2(18, 26)
+          )
+        );
+      }
+    } else {
+      console.log("done");
+    }
+  }
+  hand() {
+    console.log("hand");
+  }
+}
+
 //Game specific variables------------------------------------------------------------------------------------------
 
 let player = new Player();
@@ -272,6 +322,9 @@ counter.instantiate(new Vector2(15, 130));
 
 let box = new Box(new Item("stick", 5, 1));
 box.instantiate(new Vector2(540, 280));
+
+let npc = new NPC();
+npc.instantiate(new Vector2(280, 470));
 
 let eBtn = new GameObject();
 eBtn.addComponent(
