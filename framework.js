@@ -17,6 +17,8 @@ class GameManager {
     this.debugMode = true;
   }
   sortObjects() {
+    this.instantiatedHUD.sort((a, b) => b.layer - a.layer);
+
     this.instantiated.sort(
       //Sortera object i instantiated så att objekten med högst y animeras sist
       (a, b) =>
@@ -69,15 +71,18 @@ class GameObject {
 
     this.pos = new Vector2(); // This is the variable we call upon when getting or changing position
     this.posVariable = new Vector2(); // This is the variable within which we actually store the position
+
+    this.layer = 0;
   }
 
-  instantiate(pos = new Vector2(0, 0), hud = false) {
+  instantiate(pos = new Vector2(0, 0), hud = false, layer = 0) {
     this.pos = pos;
     if (hud) {
       gameManager.instantiatedHUD.push(this);
     } else {
       gameManager.instantiated.push(this);
     }
+    this.layer = layer;
   }
   transform(direction, speed) {
     if (typeof direction == "number") {
@@ -164,22 +169,28 @@ class GameObject {
           this.getComponent(Animator).spriteSheet.yOffset * gameManager.scale
       );
     }
-    return new Vector2(
-      this.pos.x +
-        (this.getComponent(SpriteRenderer).spriteSheet.sWidth *
-          gameManager.scale) /
-          2,
-      this.pos.y +
-        this.getComponent(SpriteRenderer).spriteSheet.yOffset *
-          gameManager.scale
-    );
+    if (
+      this.getComponent(
+        SpriteRenderer.spriteSheet.sheet.src != "Sprites/sprites/"
+      )
+    ) {
+      return new Vector2(
+        this.pos.x +
+          (this.getComponent(SpriteRenderer).spriteSheet.sWidth *
+            gameManager.scale) /
+            2,
+        this.pos.y +
+          this.getComponent(SpriteRenderer).spriteSheet.yOffset *
+            gameManager.scale
+      );
+    }
   }
 }
 
 class SpriteSheet {
-  constructor(id, sWidth, sHeight, yOffset = sHeight, columns = 1) {
+  constructor(path, sWidth, sHeight, yOffset = sHeight, columns = 1) {
     let sheetElement = document.createElement("img");
-    sheetElement.src = "Sprites/sprites/" + id;
+    sheetElement.src = "Sprites/sprites/" + path;
     sheetElement.style.display = "none";
     document.body.appendChild(sheetElement);
     this.sheet = sheetElement;

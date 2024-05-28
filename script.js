@@ -26,6 +26,21 @@ class Player extends Entity {
 
     this.interactable = [];
     this.interaciton = null;
+
+    this.inventory = [];
+    this.inventorySize = 4;
+    this.inventorySlots = [];
+
+    for (let i = 0; i < this.inventorySize; i++) {
+      let newSlot = new InventorySlot();
+      this.inventorySlots.push(newSlot);
+      newSlot.instantiate(new Vector2(10 + i * 80, 530), true);
+      newSlot.contentObject.instantiate(
+        new Vector2(newSlot.pos.x + 9, newSlot.pos.y + 9),
+        true,
+        1
+      );
+    }
   }
 
   run() {
@@ -49,6 +64,14 @@ class Player extends Entity {
         }
       };
       addEventListener("keydown", this.interaciton);
+    }
+
+    //Inventory View
+    for (let i = 0; i < this.inventory.length; i++) {
+      const item = this.inventory[i];
+      const slot = this.inventorySlots[i];
+      slot.contentObject.getComponent(SpriteRenderer).yIndex = item.yIndex;
+      slot.contentObject.getComponent(SpriteRenderer).xIndex = item.xIndex;
     }
   }
 
@@ -178,6 +201,59 @@ class InteractionHandler extends Component {
   }
 }
 
+class Box extends GameObject {
+  constructor(inside) {
+    super();
+    this.inside = inside;
+    this.addComponent(
+      new SpriteRenderer(
+        this,
+        new SpriteSheet("objects/objects.png", 16, 16, 14),
+        5
+      ),
+      new BoxCollider(this, 14, 11, new Vector2(1, 3)),
+      new InteractionHandler(
+        this,
+        () => {
+          this.pickup();
+        },
+        14,
+        11,
+        new Vector2(1, 3)
+      )
+    );
+  }
+  pickup() {
+    if (player.inventory.length < player.inventorySize) {
+      player.inventory.push(this.inside);
+    }
+  }
+}
+
+class Item {
+  constructor(name, xIndex, yIndex) {
+    this.name = name;
+    this.xIndex = xIndex;
+    this.yIndex = yIndex;
+  }
+}
+
+class InventorySlot extends GameObject {
+  constructor() {
+    super();
+    this.addComponent(
+      new SpriteRenderer(this, new SpriteSheet("HUD/inventorySlot.png", 22, 22))
+    );
+    this.contentObject = new GameObject();
+    this.contentObject.addComponent(
+      new SpriteRenderer(
+        this.contentObject,
+        new SpriteSheet("HUD/inventorySheet.png", 16, 16)
+      )
+    );
+  }
+}
+
 //Game specific variables------------------------------------------------------------------------------------------
 
 let player = new Player();
@@ -194,45 +270,8 @@ counter.addComponent(
 );
 counter.instantiate(new Vector2(15, 130));
 
-let box = new GameObject();
-box.addComponent(
-  new SpriteRenderer(
-    box,
-    new SpriteSheet("objects/objects.png", 16, 16, 14),
-    5
-  ),
-  new BoxCollider(box, 14, 11, new Vector2(1, 3)),
-  new InteractionHandler(
-    box,
-    () => {
-      console.log("one");
-    },
-    14,
-    11,
-    new Vector2(1, 3)
-  )
-);
+let box = new Box(new Item("stick", 5, 1));
 box.instantiate(new Vector2(540, 280));
-
-let box2 = new GameObject();
-box2.addComponent(
-  new SpriteRenderer(
-    box2,
-    new SpriteSheet("objects/objects.png", 16, 16, 14),
-    5
-  ),
-  new BoxCollider(box2, 14, 11, new Vector2(1, 3)),
-  new InteractionHandler(
-    box2,
-    () => {
-      console.log("two");
-    },
-    14,
-    11,
-    new Vector2(1, 3)
-  )
-);
-box2.instantiate(new Vector2(400, 280));
 
 let eBtn = new GameObject();
 eBtn.addComponent(
