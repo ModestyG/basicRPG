@@ -14,7 +14,7 @@ class GameManager {
     this.instantiatedHUD = [];
     this.scale = 3;
     this.colliders = [];
-    this.debugMode = true;
+    this.debugMode = false;
   }
   sortObjects() {
     this.instantiatedHUD.sort((a, b) => b.layer - a.layer);

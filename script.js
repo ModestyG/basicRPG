@@ -423,12 +423,18 @@ borders.addComponent(
     borders,
     new SpriteSheet("HUD/inventorySheet.png", 16, 16) // PLaceholder sprite
   ),
-  new BoxCollider(borders, 700, 20, new Vector2(-50, 0)),
+  new BoxCollider(borders, 700, 20, new Vector2(-50, 10)),
   new BoxCollider(borders, 700, 20, new Vector2(-50, 200)),
   new BoxCollider(borders, 20, 700, new Vector2(-20, 0)),
   new BoxCollider(borders, 20, 700, new Vector2(200, 0))
 );
 borders.instantiate();
+
+let bg = new GameObject();
+bg.addComponent(
+  new SpriteRenderer(bg, new SpriteSheet("tilesets/bg.png", 200, 200, -200))
+);
+bg.instantiate();
 
 if (gameManager.debugMode) {
   addEventListener("mousedown", function (e) {
