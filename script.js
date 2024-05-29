@@ -208,17 +208,24 @@ class InteractionHandler extends Component {
 
 class NPC extends Entity {
   constructor() {
-    super(
-      new SpriteSheet("characters/knightIdle.png", 48, 48, 41, 6),
-      new SpriteSheet("characters/knightWalking.png", 48, 48, 41, 6)
-    );
+    if (Math.random() > 0.5) {
+      super(
+        new SpriteSheet("characters/knightIdle.png", 48, 48, 41, 6),
+        new SpriteSheet("characters/knightWalking.png", 48, 48, 41, 6)
+      );
+    } else {
+      super(
+        new SpriteSheet("characters/goblinIdle.png", 48, 48, 41, 6),
+        new SpriteSheet("characters/goblinWalking.png", 48, 48, 41, 6)
+      );
+    }
     this.addComponent(
       //new BoxCollider(this, 13, 5, new Vector2(18, 35)),
       new NPCController(this)
     );
     this.speed = 4;
 
-    this.request = new Item("stick", 4, 3);
+    this.request = getRandomObjValue(ITEMS);
   }
 }
 
@@ -291,9 +298,12 @@ class NPCController extends Component {
       19,
       new Vector2(18, 26)
     );
+    this.gameObject.getComponent(Animator).row = 2;
   }
   run() {
     if (!this.arrived) {
+      this.gameObject.getComponent(Animator).spriteSheet =
+        this.gameObject.walkingSpritesheet;
       this.gameObject.transform(
         new Vector2(
           this.destination.x - this.gameObject.getPos().x,
@@ -303,7 +313,8 @@ class NPCController extends Component {
       );
       if (this.destination.getDistance(this.gameObject.getPos()) < 6) {
         this.arrived = true;
-
+        this.gameObject.getComponent(Animator).spriteSheet =
+          this.gameObject.idleSpritesheet;
         if (
           !this.leaving &&
           this.finalDestination.getDistance(this.gameObject.getPos()) < 6
@@ -339,11 +350,23 @@ class NPCController extends Component {
         npc.getComponent(NPCController).arrived = false;
         npc.getComponent(NPCController).destination.y -= 30;
       });
+      this.gameObject.getComponent(Animator).row = 0;
     }
   }
 }
 
+function getRandomObjValue(obj) {
+  var keys = Object.keys(obj);
+  return obj[keys[(keys.length * Math.random()) << 0]];
+}
+
 //Game specific variables------------------------------------------------------------------------------------------
+
+ITEMS = {
+  stick: new Item("stick", 4, 3),
+  ironOre: new Item("ironOre", 5, 2),
+  ironIngot: new Item("ironIngot", 5, 1),
+};
 
 let NPCs = [];
 
@@ -360,9 +383,9 @@ counter.addComponent(
 );
 counter.instantiate(new Vector2(15, 130));
 
-new Box(new Item("stick", 4, 3)).instantiate(new Vector2(540, 220));
-new Box(new Item("ironShard", 5, 2)).instantiate(new Vector2(540, 290));
-new Box(new Item("ironBar", 5, 1)).instantiate(new Vector2(540, 360));
+new Box(ITEMS["stick"]).instantiate(new Vector2(540, 220));
+new Box(ITEMS["ironOre"]).instantiate(new Vector2(540, 290));
+new Box(ITEMS["ironIngot"]).instantiate(new Vector2(540, 360));
 
 trash = new GameObject();
 trash.addComponent(
@@ -393,6 +416,19 @@ wantSlot.contentObject.instantiate(
   true,
   1
 );
+
+let borders = new GameObject();
+borders.addComponent(
+  new SpriteRenderer(
+    borders,
+    new SpriteSheet("HUD/inventorySheet.png", 16, 16) // PLaceholder sprite
+  ),
+  new BoxCollider(borders, 700, 20, new Vector2(-50, 0)),
+  new BoxCollider(borders, 700, 20, new Vector2(-50, 200)),
+  new BoxCollider(borders, 20, 700, new Vector2(-20, 0)),
+  new BoxCollider(borders, 20, 700, new Vector2(200, 0))
+);
+borders.instantiate();
 
 if (gameManager.debugMode) {
   addEventListener("mousedown", function (e) {
