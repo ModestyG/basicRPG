@@ -218,7 +218,7 @@ class NPC extends Entity {
     );
     this.speed = 4;
 
-    this.request = "stick";
+    this.request = new Item("stick", 4, 3);
   }
 }
 
@@ -303,11 +303,17 @@ class NPCController extends Component {
       );
       if (this.destination.getDistance(this.gameObject.getPos()) < 6) {
         this.arrived = true;
+
         if (
           !this.leaving &&
           this.finalDestination.getDistance(this.gameObject.getPos()) < 6
         ) {
           this.gameObject.addComponent(this.interacitonHandler);
+
+          wantSlot.contentObject.getComponent(SpriteRenderer).yIndex =
+            this.gameObject.request.yIndex;
+          wantSlot.contentObject.getComponent(SpriteRenderer).xIndex =
+            this.gameObject.request.xIndex;
         }
       }
     }
@@ -315,9 +321,11 @@ class NPCController extends Component {
   hand() {
     if (
       player.inventory[0] &&
-      this.gameObject.request == player.inventory[0].name
+      this.gameObject.request.name == player.inventory[0].name
     ) {
       player.inventory.shift();
+      wantSlot.contentObject.getComponent(SpriteRenderer).yIndex = 0;
+      wantSlot.contentObject.getComponent(SpriteRenderer).xIndex = 0;
       this.gameObject.removeComponent(InteractionHandler);
       this.leaving = true;
       this.destination = new Vector2(415, 670);
@@ -340,7 +348,6 @@ class NPCController extends Component {
 let NPCs = [];
 
 let player = new Player();
-let playerCollider = player.getComponent(BoxCollider);
 player.instantiate(new Vector2(250, 100));
 
 let counter = new GameObject();
@@ -353,14 +360,39 @@ counter.addComponent(
 );
 counter.instantiate(new Vector2(15, 130));
 
-let box = new Box(new Item("stick", 4, 3));
-box.instantiate(new Vector2(540, 280));
+new Box(new Item("stick", 4, 3)).instantiate(new Vector2(540, 220));
+new Box(new Item("ironShard", 5, 2)).instantiate(new Vector2(540, 290));
+new Box(new Item("ironBar", 5, 1)).instantiate(new Vector2(540, 360));
+
+trash = new GameObject();
+trash.addComponent(
+  new SpriteRenderer(trash, new SpriteSheet("HUD/trash.png", 22, 22)),
+  new BoxCollider(trash, 22, 22),
+  new InteractionHandler(
+    trash,
+    () => {
+      player.inventory.shift();
+    },
+    22,
+    22,
+    new Vector2(0, 0)
+  )
+);
+trash.instantiate(new Vector2(534, 534));
 
 let eBtn = new GameObject();
 eBtn.addComponent(
   new SpriteRenderer(eBtn, new SpriteSheet("HUD/E-button.png", 7, 7))
 );
 eBtn.instantiate(new Vector2(-Infinity, -Infinity), true);
+
+let wantSlot = new InventorySlot();
+wantSlot.instantiate(new Vector2(40, 125), true);
+wantSlot.contentObject.instantiate(
+  new Vector2(wantSlot.pos.x + 9, wantSlot.pos.y + 9),
+  true,
+  1
+);
 
 if (gameManager.debugMode) {
   addEventListener("mousedown", function (e) {
