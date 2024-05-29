@@ -209,11 +209,11 @@ class InteractionHandler extends Component {
 class NPC extends Entity {
   constructor() {
     super(
-      new SpriteSheet("characters/playerIdle.png", 48, 48, 41, 6),
-      new SpriteSheet("characters/playerWalking.png", 48, 48, 41, 6)
+      new SpriteSheet("characters/knightIdle.png", 48, 48, 41, 6),
+      new SpriteSheet("characters/knightWalking.png", 48, 48, 41, 6)
     );
     this.addComponent(
-      new BoxCollider(this, 13, 5, new Vector2(18, 35)),
+      //new BoxCollider(this, 13, 5, new Vector2(18, 35)),
       new NPCController(this)
     );
     this.speed = 4;
@@ -278,7 +278,8 @@ class InventorySlot extends GameObject {
 class NPCController extends Component {
   constructor(gameObject) {
     super(gameObject, true);
-    this.destination = new Vector2(130, 245);
+    this.finalDestination = new Vector2(130, 245);
+    this.destination = new Vector2(130, 245 + 30 * NPCs.length);
     this.arrived = false;
     this.leaving = false;
     this.interacitonHandler = new InteractionHandler(
@@ -300,9 +301,14 @@ class NPCController extends Component {
         ),
         this.gameObject.speed
       );
-      if (this.destination.getDistance(this.gameObject.getPos()) < 5) {
+      if (this.destination.getDistance(this.gameObject.getPos()) < 6) {
         this.arrived = true;
-        this.gameObject.addComponent(this.interacitonHandler);
+        if (
+          !this.leaving &&
+          this.finalDestination.getDistance(this.gameObject.getPos()) < 6
+        ) {
+          this.gameObject.addComponent(this.interacitonHandler);
+        }
       }
     }
   }
@@ -320,11 +326,18 @@ class NPCController extends Component {
         player.interactable.indexOf(this.interacitonHandler),
         1
       );
+      NPCs.splice(NPCs.indexOf(this.gameObject), 1);
+      NPCs.forEach((npc) => {
+        npc.getComponent(NPCController).arrived = false;
+        npc.getComponent(NPCController).destination.y -= 30;
+      });
     }
   }
 }
 
 //Game specific variables------------------------------------------------------------------------------------------
+
+let NPCs = [];
 
 let player = new Player();
 let playerCollider = player.getComponent(BoxCollider);
@@ -342,8 +355,6 @@ counter.instantiate(new Vector2(15, 130));
 
 let box = new Box(new Item("stick", 4, 3));
 box.instantiate(new Vector2(540, 280));
-
-new NPC().instantiate(new Vector2(280, 470));
 
 let eBtn = new GameObject();
 eBtn.addComponent(
@@ -368,7 +379,8 @@ if (gameManager.debugMode) {
 
 let lastTimestamp = 0,
   maxFPS = 10,
-  timestep = 1000 / maxFPS;
+  timestep = 1000 / maxFPS,
+  timer = 0;
 
 function update(timestamp) {
   ctx.clearRect(0, 0, CANVASWIDTH, CANVASHEIGHT);
@@ -386,7 +398,13 @@ function update(timestamp) {
 
   player.run();
 
+  if (timer >= 40) {
+    NPCs.push(new NPC());
+    NPCs[NPCs.length - 1].instantiate(new Vector2(280, 470));
+    timer = 0;
+  }
   if (!(timestamp - lastTimestamp < timestep)) {
+    timer++;
     lastTimestamp = timestamp;
   }
   requestAnimationFrame(update);
